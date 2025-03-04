@@ -1,15 +1,17 @@
 package com.abaduna.provider.controller;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.http.*;
+
+import com.abaduna.provider.kafka.KafkaProducerService;
 import com.abaduna.provider.model.Reserva;
 import com.abaduna.provider.model.ReservaDto;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api/proxy/reservas")
@@ -18,9 +20,14 @@ public class ReservaProxyController {
     private final RestTemplate restTemplate;
     private final String BASE_URL = "http://localhost:8080/reservas"; // Cambia la URL según la ubicación de la API de reservas
 
+    private final KafkaProducerService kafkaProducerService;
+    private final ObjectMapper objectMapper; // Para convertir a JSON
+
     @Autowired
-    public ReservaProxyController(RestTemplate restTemplate) {
+    public ReservaProxyController(RestTemplate restTemplate, KafkaProducerService kafkaProducerService, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
+        this.kafkaProducerService = kafkaProducerService;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping
@@ -36,6 +43,12 @@ public class ReservaProxyController {
                     request,
                     Reserva.class
             );
+
+            // Convertir el objeto ReservaDto a JSON
+            String reservaJson = objectMapper.writeValueAsString(reserva);
+
+            // Enviar el mensaje serializado a Kafka
+            kafkaProducerService.sendEventoToMultipleTopics(reservaJson, List.of("reservas_creadas_topic", "reservas_actualizadas_topic"));
 
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
@@ -80,6 +93,12 @@ public class ReservaProxyController {
                     Reserva.class
             );
 
+            // Convertir el objeto Reserva a JSON
+            String reservaJson = objectMapper.writeValueAsString(response.getBody());
+
+            // Enviar el mensaje serializado a Kafka
+            kafkaProducerService.sendEventoToMultipleTopics(reservaJson, List.of("reservas_obtenidas_topic", "reservas_actualizadas_topic"));
+
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             System.out.println(e);
@@ -101,6 +120,12 @@ public class ReservaProxyController {
                     Reserva.class
             );
 
+            // Convertir el objeto actualizado a JSON
+            String reservaJson = objectMapper.writeValueAsString(reservaActualizada);
+
+            // Enviar el mensaje serializado a Kafka
+            kafkaProducerService.sendEventoToMultipleTopics(reservaJson, List.of("reservas_actualizadas_topic"));
+
             return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
             System.out.println(e);
@@ -121,6 +146,10 @@ public class ReservaProxyController {
                     request,
                     Void.class
             );
+
+            // Enviar el ID serializado a Kafka
+            String idJson = objectMapper.writeValueAsString(id);
+            kafkaProducerService.sendEventoToMultipleTopics(idJson, List.of("reservas_eliminadas_topic"));
 
             return ResponseEntity.noContent().build();
         } catch (Exception e) {

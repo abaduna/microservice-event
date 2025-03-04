@@ -1,9 +1,22 @@
 server:
   port: 8081
 
+# Configuración común para todos los perfiles
 spring:
   kafka:
     bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: evento-group
+      auto-offset-reset: earliest
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: debug
+logging:
+  level:
+    root: DEBUG
+    org.springframework: DEBUG
+    com.abaduna: DEBUG

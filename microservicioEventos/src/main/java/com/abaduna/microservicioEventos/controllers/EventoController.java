@@ -6,6 +6,7 @@ import com.abaduna.microservicioEventos.models.Evento;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -14,14 +15,10 @@ import java.util.List;
 public class EventoController {
 
     @Autowired
-    private  iEventoService eventoService;
+    private iEventoService eventoService;
 
-
-
-    @GetMapping
-    public List<Evento> getAllEventos() {
-        return eventoService.getAllEventos();
-    }
+    @Autowired
+    private KafkaTemplate<String, List<Evento>> kafkaTemplate;
 
     @GetMapping("/{id}")
     public ResponseEntity<Evento> getEventoById(@PathVariable Long id) {
